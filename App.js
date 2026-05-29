@@ -5,6 +5,7 @@ import * as SQLite from 'expo-sqlite';
 export default function App() {
   const [azucar, setAzucar] = useState('');
   const [momento, setMomento] = useState('Antes del Desayuno');
+  const [comentario, setComentario] = useState('');
   const [historial, setHistorial] = useState([]);
   const [db, setDb] = useState(null);
 
@@ -13,11 +14,11 @@ export default function App() {
   const [editId, setEditId] = useState(null);
   const [editAzucar, setEditAzucar] = useState('');
   const [editMomento, setEditMomento] = useState('');
+  const [editComentario, setEditComentario] = useState('');
 
   useEffect(() => {
     async function initDB() {
-      // Creamos la versión v6 para asegurar que la base de datos se adapte al diseño sin conflictos
-      const database = await SQLite.openDatabaseAsync('diabetes_v6.db');
+      const database = await SQLite.openDatabaseAsync('walterdiabetes.db');
       setDb(database);
       await database.execAsync(`
         PRAGMA journal_mode = WAL;
@@ -25,7 +26,8 @@ export default function App() {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           valor INTEGER NOT NULL,
           fecha TEXT NOT NULL,
-          momento TEXT NOT NULL
+          momento TEXT NOT NULL,
+          comentario TEXT
         );
       `);
       cargarMediciones(database);
@@ -48,10 +50,10 @@ export default function App() {
     const fechaISO = new Date().toISOString();
     try {
       await db.runAsync(
-        'INSERT INTO mediciones (valor, fecha, momento) VALUES (?, ?, ?)',
-        [parseInt(azucar), fechaISO, momento]
+        'INSERT INTO mediciones (valor, fecha, momento, comentario) VALUES (?, ?, ?, ?)',
+        [parseInt(azucar), fechaISO, momento, comentario]
       );
-      setAzucar(''); setMomento('Antes del Desayuno');
+      setAzucar(''); setComentario(''); setMomento('Antes del Desayuno');
       cargarMediciones();
       Alert.alert('¡Éxito!', 'Medición guardada correctamente.');
     } catch (error) {
@@ -124,6 +126,7 @@ export default function App() {
         data={historial}
         keyExtractor={(item) => item.id.toString()}
         ListHeaderComponent={
+          /* FORMULARIO DE CARGA ORIGINAL (VERTICAL) */
           <View style={styles.card}>
             <Text style={styles.label}>Ingresa el valor actual (mg/dL):</Text>
             <TextInput
@@ -149,6 +152,16 @@ export default function App() {
               ))}
             </View>
 
+            <Text style={styles.label}>Comentarios u observaciones (Opcional):</Text>
+            <TextInput
+              style={[styles.input, styles.inputComentario]}
+              placeholder="Ej. Cambié de medicación, me sentía mareado..."
+              value={comentario}
+              onChangeText={setComentario}
+              multiline={true}
+              numberOfLines={2}
+            />
+
             <TouchableOpacity style={styles.botonGuardar} onPress={guardarMedicion}>
               <Text style={styles.botonTexto}>Guardar Medición</Text>
             </TouchableOpacity>
@@ -168,7 +181,7 @@ export default function App() {
             <TouchableOpacity 
               style={styles.itemHistorial} 
               onLongPress={() => abrirEditor(item)}
-              delayLongPress={600}
+              delayLongPress={500}
             >
               {/* FILA SUPERIOR: Valor a la izquierda y Fecha/Hora a la derecha */}
               <View style={styles.filaSuperior}>
@@ -187,6 +200,13 @@ export default function App() {
                   {item.momento}
                 </Text>
               </View>
+
+              {/* FILA INFERIOR: Comentario con su globito gris de fondo (si tiene) */}
+              {item.comentario ? (
+                <View style={styles.contenedorComentario}>
+                  <Text style={styles.comentarioTexto}>💬</Text>
+                </View>
+              ) : null}
             </TouchableOpacity>
           );
         }}
@@ -211,6 +231,9 @@ export default function App() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            <Text style={styles.label}>Comentario:</Text>
+            <TextInput style={styles.input} value={editComentario} onChangeText={setEditComentario} />
 
             <TouchableOpacity style={styles.botonActualizarModal} onPress={actualizarMedicion}>
               <Text style={styles.botonTexto}>Aplicar Cambios</Text>
@@ -239,7 +262,7 @@ const styles = StyleSheet.create({
   input: { backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, fontSize: 18, textAlign: 'center', marginBottom: 12, fontWeight: 'bold' },
   inputComentario: { fontSize: 14, textAlign: 'left', fontWeight: 'normal', height: 50, textAlignVertical: 'top' },
   
-  // Selector vertical original
+  // Selector vertical
   selectorContenedorVertical: { marginBottom: 12 },
   opcionBotonVertical: { backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, marginBottom: 6, alignItems: 'center', borderWidth: 1, borderColor: '#e1e8ed' },
   opcionSeleccionada: { backgroundColor: '#007bff', borderColor: '#007bff' },
@@ -249,7 +272,6 @@ const styles = StyleSheet.create({
   botonGuardar: { backgroundColor: '#28a745', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 5 },
   botonTexto: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   
-  // ESTILOS DE LA TARJETA CLON DE TU CAPTURA
   itemHistorial: { 
     backgroundColor: '#fff', 
     padding: 15, 
@@ -277,6 +299,16 @@ const styles = StyleSheet.create({
     marginVertical: 8 
   },
   momentoTexto: { fontSize: 15, fontWeight: '700', color: '#111' },
+
+  // Bloque del comentario abajo con fondo gris
+  contenedorComentario: { 
+    backgroundColor: '#525252', 
+    padding: 8, 
+    borderRadius: 8, 
+    alignSelf: 'flex-start', 
+    marginTop: 4 
+  },
+  comentarioTexto: { fontSize: 13, color: '#555', fontStyle: 'italic' },
   
   listaVacia: { textAlign: 'center', marginTop: 40, color: '#aaa', fontSize: 16 },
 
