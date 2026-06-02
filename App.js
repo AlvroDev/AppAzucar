@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, SafeAreaView, Alert, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, SafeAreaView, Alert, Modal, Platform } from 'react-native';
 import * as SQLite from 'expo-sqlite';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function App() {
   const [azucar, setAzucar] = useState('');
@@ -8,6 +9,8 @@ export default function App() {
   const [comentario, setComentario] = useState('');
   const [historial, setHistorial] = useState([]);
   const [db, setDb] = useState(null);
+  const [fecha, setFecha] = useState(new Date());
+  const [mostrarPicker, setMostrarPicker] = useState(false);
 
   // Estados para el Modal de Edición
   const [modalVisible, setModalVisible] = useState(false);
@@ -15,10 +18,12 @@ export default function App() {
   const [editAzucar, setEditAzucar] = useState('');
   const [editMomento, setEditMomento] = useState('');
   const [editComentario, setEditComentario] = useState('');
+  const [editFecha, setEditFecha] = useState(new Date());
+  const [mostrarPickerModal, setMostrarPickerModal] = useState(false);
 
   useEffect(() => {
     async function initDB() {
-      const database = await SQLite.openDatabaseAsync('walterdiabetes.db');
+      const database = await SQLite.openDatabaseAsync('walterdiabetes_v2.db');
       setDb(database);
       await database.execAsync(`
         PRAGMA journal_mode = WAL;
@@ -47,13 +52,16 @@ export default function App() {
       Alert.alert('Error', 'Por favor, ingresa el valor de azúcar.');
       return;
     }
-    const fechaISO = new Date().toISOString();
+    const fechaISO = fecha.toISOString();
     try {
       await db.runAsync(
         'INSERT INTO mediciones (valor, fecha, momento, comentario) VALUES (?, ?, ?, ?)',
         [parseInt(azucar), fechaISO, momento, comentario]
       );
-      setAzucar(''); setComentario(''); setMomento('Antes del Desayuno');
+      setAzucar('');
+      setComentario('');
+      setMomento('Antes del Desayuno');
+      setFecha(new Date());
       cargarMediciones();
       Alert.alert('¡Éxito!', 'Medición guardada correctamente.');
     } catch (error) {
@@ -66,14 +74,15 @@ export default function App() {
     setEditAzucar(item.valor.toString());
     setEditMomento(item.momento);
     setEditComentario(item.comentario || '');
+    setEditFecha(new Date(item.fecha));
     setModalVisible(true);
   };
 
   const actualizarMedicion = async () => {
     try {
       await db.runAsync(
-        'UPDATE mediciones SET valor = ?, momento = ?, comentario = ? WHERE id = ?',
-        [parseInt(editAzucar), editMomento, editComentario, editId]
+        'UPDATE mediciones SET valor = ?, momento = ?, comentario = ?, fecha = ? WHERE id = ?',
+        [parseInt(editAzucar), editMomento, editComentario, editFecha.toISOString(), editId]
       );
       setModalVisible(false);
       cargarMediciones();
@@ -96,9 +105,9 @@ export default function App() {
   };
 
   const obtenerColorAzucar = (valor) => {
-    if (valor < 80) return '#f0ad4e'; // Amarillo
-    if (valor > 130) return '#d9534f'; // Rojo
-    return '#5cb85c'; // Verde
+    if (valor < 80) return '#f0ad4e';
+    if (valor > 130) return '#d9534f';
+    return '#5cb85c';
   };
 
   const formatearFecha = (isoString) => {
@@ -126,7 +135,6 @@ export default function App() {
         data={historial}
         keyExtractor={(item) => item.id.toString()}
         ListHeaderComponent={
-          /* FORMULARIO DE CARGA ORIGINAL (VERTICAL) */
           <View style={styles.card}>
             <Text style={styles.label}>Ingresa el valor actual (mg/dL):</Text>
             <TextInput
@@ -152,6 +160,28 @@ export default function App() {
               ))}
             </View>
 
+            {/* SELECTOR DE FECHA */}
+            <Text style={styles.label}>Fecha:</Text>
+            <View style={styles.filaFecha}>
+              <Text style={styles.textoFechaActual}>
+                {fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'numeric', year: 'numeric' })}
+              </Text>
+              <TouchableOpacity onPress={() => setMostrarPicker(true)} style={styles.botonCalendario}>
+                <Text style={styles.emojiCalendario}>📅</Text>
+              </TouchableOpacity>
+            </View>
+            {mostrarPicker && (
+              <DateTimePicker
+                value={fecha}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedDate) => {
+                  setMostrarPicker(false);
+                  if (selectedDate) setFecha(selectedDate);
+                }}
+              />
+            )}
+
             <Text style={styles.label}>Comentarios u observaciones (Opcional):</Text>
             <TextInput
               style={[styles.input, styles.inputComentario]}
@@ -168,22 +198,19 @@ export default function App() {
           </View>
         }
         renderItem={({ item }) => {
-          // Lógica dinámica para definir la posición del pin en la fila intermedia
-          let posicionMomento = 'flex-start'; // Izquierda por defecto (Desayuno)
+          let posicionMomento = 'flex-start';
           if (item.momento === 'Antes del Almuerzo') {
-            posicionMomento = 'center'; // Centro
+            posicionMomento = 'center';
           } else if (item.momento === 'Antes de la Cena') {
-            posicionMomento = 'flex-end'; // Derecha
+            posicionMomento = 'flex-end';
           }
 
           return (
-            /* TARJETA CON PRESION LARGA (onLongPress) */
             <TouchableOpacity 
               style={styles.itemHistorial} 
               onLongPress={() => abrirEditor(item)}
               delayLongPress={500}
             >
-              {/* FILA SUPERIOR: Valor a la izquierda y Fecha/Hora a la derecha */}
               <View style={styles.filaSuperior}>
                 <Text style={[styles.valorTexto, { color: obtenerColorAzucar(item.valor) }]}>
                   {item.valor} <Text style={styles.unidadTexto}>mg/dL</Text>
@@ -194,14 +221,12 @@ export default function App() {
                 </View>
               </View>
 
-              {/* FILA MEDIO: Pin dinámico que se mueve según el momento */}
               <View style={[styles.filaMomentoDinamica, { justifyContent: posicionMomento }]}>
                 <Text style={styles.momentoTexto}>
                   {item.momento}
                 </Text>
               </View>
 
-              {/* FILA INFERIOR: Comentario con su globito gris de fondo (si tiene) */}
               {item.comentario ? (
                 <View style={styles.contenedorComentario}>
                   <Text style={styles.comentarioTexto}>💬</Text>
@@ -231,6 +256,28 @@ export default function App() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* SELECTOR DE FECHA EN EL MODAL */}
+            <Text style={styles.label}>Fecha:</Text>
+            <View style={styles.filaFecha}>
+              <Text style={styles.textoFechaActual}>
+                {editFecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'numeric', year: 'numeric' })}
+              </Text>
+              <TouchableOpacity onPress={() => setMostrarPickerModal(true)} style={styles.botonCalendario}>
+                <Text style={styles.emojiCalendario}>📅</Text>
+              </TouchableOpacity>
+            </View>
+            {mostrarPickerModal && (
+              <DateTimePicker
+                value={editFecha}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedDate) => {
+                  setMostrarPickerModal(false);
+                  if (selectedDate) setEditFecha(selectedDate);
+                }}
+              />
+            )}
 
             <Text style={styles.label}>Comentario:</Text>
             <TextInput style={styles.input} value={editComentario} onChangeText={setEditComentario} />
@@ -262,12 +309,16 @@ const styles = StyleSheet.create({
   input: { backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, fontSize: 18, textAlign: 'center', marginBottom: 12, fontWeight: 'bold' },
   inputComentario: { fontSize: 14, textAlign: 'left', fontWeight: 'normal', height: 50, textAlignVertical: 'top' },
   
-  // Selector vertical
   selectorContenedorVertical: { marginBottom: 12 },
   opcionBotonVertical: { backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, marginBottom: 6, alignItems: 'center', borderWidth: 1, borderColor: '#e1e8ed' },
   opcionSeleccionada: { backgroundColor: '#007bff', borderColor: '#007bff' },
   opcionTexto: { fontSize: 15, color: '#333', fontWeight: '500' },
   opcionTextoSeleccionado: { color: '#fff', fontWeight: 'bold' },
+
+  filaFecha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, marginBottom: 12 },
+  textoFechaActual: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  botonCalendario: { padding: 4 },
+  emojiCalendario: { fontSize: 22 },
   
   botonGuardar: { backgroundColor: '#28a745', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 5 },
   botonTexto: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
@@ -292,7 +343,6 @@ const styles = StyleSheet.create({
   fechaTexto: { fontSize: 13, color: '#777' },
   horaTexto: { fontSize: 13, color: '#777', marginTop: 2 },
 
-  // Fila del pin que permite alineación dinámica (izquierda, centro, derecha)
   filaMomentoDinamica: { 
     flexDirection: 'row', 
     width: '100%', 
@@ -300,7 +350,6 @@ const styles = StyleSheet.create({
   },
   momentoTexto: { fontSize: 15, fontWeight: '700', color: '#111' },
 
-  // Bloque del comentario abajo con fondo gris
   contenedorComentario: { 
     backgroundColor: '#525252', 
     padding: 8, 
@@ -312,7 +361,6 @@ const styles = StyleSheet.create({
   
   listaVacia: { textAlign: 'center', marginTop: 40, color: '#aaa', fontSize: 16 },
 
-  // Estilos del Modal
   modalCentrado: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 },
   modalContenido: { backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 5 },
   modalTitulo: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
