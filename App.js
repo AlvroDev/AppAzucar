@@ -1,11 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, SafeAreaView, Alert, Modal, Platform } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList, SafeAreaView, Alert, Modal, Platform, ScrollView } from 'react-native';
 import * as SQLite from 'expo-sqlite';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+const MOMENTOS = ['Desayuno', 'Almuerzo', 'Cena'];
+const RELACIONES = ['Antes', 'Después'];
+const ARTICULOS = { Desayuno: 'del', Almuerzo: 'del', Cena: 'de la' };
+
+const construirMomento = (relacion, comida) => `${relacion} ${ARTICULOS[comida]} ${comida}`;
+
+const parsearMomento = (momentoTexto) => {
+  const relacion = RELACIONES.find((r) => momentoTexto.startsWith(r)) || 'Antes';
+  const comida = MOMENTOS.find((c) => momentoTexto.includes(c)) || 'Desayuno';
+  return { relacion, comida };
+};
+
 export default function App() {
   const [azucar, setAzucar] = useState('');
-  const [momento, setMomento] = useState('Antes del Desayuno');
+  const [comida, setComida] = useState('Desayuno');
+  const [relacion, setRelacion] = useState('Antes');
   const [comentario, setComentario] = useState('');
   const [historial, setHistorial] = useState([]);
   const [db, setDb] = useState(null);
@@ -17,7 +30,8 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editAzucar, setEditAzucar] = useState('');
-  const [editMomento, setEditMomento] = useState('');
+  const [editComida, setEditComida] = useState('Desayuno');
+  const [editRelacion, setEditRelacion] = useState('Antes');
   const [editComentario, setEditComentario] = useState('');
   const [editFecha, setEditFecha] = useState(new Date());
   const [mostrarPickerModal, setMostrarPickerModal] = useState(false);
@@ -55,6 +69,7 @@ export default function App() {
       return;
     }
     const fechaISO = fecha.toISOString();
+    const momento = construirMomento(relacion, comida);
     try {
       await db.runAsync(
         'INSERT INTO mediciones (valor, fecha, momento, comentario) VALUES (?, ?, ?, ?)',
@@ -62,11 +77,13 @@ export default function App() {
       );
       setAzucar('');
       setComentario('');
-      setMomento('Antes del Desayuno');
+      setComida('Desayuno');
+      setRelacion('Antes');
       setFecha(new Date());
       cargarMediciones();
       Alert.alert('¡Éxito!', 'Medición guardada correctamente.');
     } catch (error) {
+      console.error('Error al guardar:', error);
       Alert.alert('Error', 'No se pudo guardar.');
     }
   };
@@ -74,22 +91,26 @@ export default function App() {
   const abrirEditor = (item) => {
     setEditId(item.id);
     setEditAzucar(item.valor.toString());
-    setEditMomento(item.momento);
+    const { relacion: relacionItem, comida: comidaItem } = parsearMomento(item.momento);
+    setEditRelacion(relacionItem);
+    setEditComida(comidaItem);
     setEditComentario(item.comentario || '');
     setEditFecha(new Date(item.fecha));
     setModalVisible(true);
   };
 
   const actualizarMedicion = async () => {
+    const momentoActualizado = construirMomento(editRelacion, editComida);
     try {
       await db.runAsync(
         'UPDATE mediciones SET valor = ?, momento = ?, comentario = ?, fecha = ? WHERE id = ?',
-        [parseInt(editAzucar), editMomento, editComentario, editFecha.toISOString(), editId]
+        [parseInt(editAzucar), momentoActualizado, editComentario, editFecha.toISOString(), editId]
       );
       setModalVisible(false);
       cargarMediciones();
       Alert.alert('Actualizado', 'La medición ha sido corregida.');
     } catch (error) {
+      console.error('Error al actualizar:', error);
       Alert.alert('Error', 'No se pudo actualizar.');
     }
   };
@@ -149,13 +170,28 @@ export default function App() {
 
             <Text style={styles.label}>¿Cuándo se midió?:</Text>
             <View style={styles.selectorContenedorVertical}>
-              {['Antes del Desayuno', 'Antes del Almuerzo', 'Antes de la Cena'].map((opcion) => (
+              {MOMENTOS.map((opcion) => (
                 <TouchableOpacity
                   key={opcion}
-                  style={[styles.opcionBotonVertical, momento === opcion && styles.opcionSeleccionada]}
-                  onPress={() => setMomento(opcion)}
+                  style={[styles.opcionBotonVertical, comida === opcion && styles.opcionSeleccionada]}
+                  onPress={() => setComida(opcion)}
                 >
-                  <Text style={[styles.opcionTexto, momento === opcion && styles.opcionTextoSeleccionado]}>
+                  <Text style={[styles.opcionTexto, comida === opcion && styles.opcionTextoSeleccionado]}>
+                    {opcion}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>¿Antes o después de comer?:</Text>
+            <View style={styles.selectorContenedorHorizontal}>
+              {RELACIONES.map((opcion) => (
+                <TouchableOpacity
+                  key={opcion}
+                  style={[styles.opcionBotonHorizontal, relacion === opcion && styles.opcionSeleccionada]}
+                  onPress={() => setRelacion(opcion)}
+                >
+                  <Text style={[styles.opcionTexto, relacion === opcion && styles.opcionTextoSeleccionado]}>
                     {opcion}
                   </Text>
                 </TouchableOpacity>
@@ -228,9 +264,9 @@ export default function App() {
         }
         renderItem={({ item }) => {
           let posicionMomento = 'flex-start';
-          if (item.momento === 'Antes del Almuerzo') {
+          if (item.momento.includes('Almuerzo')) {
             posicionMomento = 'center';
-          } else if (item.momento === 'Antes de la Cena') {
+          } else if (item.momento.includes('Cena')) {
             posicionMomento = 'flex-end';
           }
 
@@ -272,84 +308,95 @@ export default function App() {
       <Modal visible={modalVisible} animationType="fade" transparent={true}>
         <View style={styles.modalCentrado}>
           <View style={styles.modalContenido}>
-            <Text style={styles.modalTitulo}>Modificar Registro</Text>
-            
-            <Text style={styles.label}>Nivel de Azúcar:</Text>
-            <TextInput style={styles.input} keyboardType="numeric" value={editAzucar} onChangeText={setEditAzucar} />
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitulo}>Modificar Registro</Text>
 
-            <Text style={styles.label}>Momento del día:</Text>
-            <View style={styles.selectorContenedorVertical}>
-              {['Antes del Desayuno', 'Antes del Almuerzo', 'Antes de la Cena'].map((opcion) => (
-                <TouchableOpacity key={opcion} style={[styles.opcionBotonVertical, editMomento === opcion && styles.opcionSeleccionada]} onPress={() => setEditMomento(opcion)}>
-                  <Text style={[styles.opcionTexto, editMomento === opcion && styles.opcionTextoSeleccionado]}>{opcion}</Text>
+              <Text style={styles.label}>Nivel de Azúcar:</Text>
+              <TextInput style={styles.input} keyboardType="numeric" value={editAzucar} onChangeText={setEditAzucar} />
+
+              <Text style={styles.label}>¿Cuándo se midió?:</Text>
+              <View style={styles.selectorContenedorVertical}>
+                {MOMENTOS.map((opcion) => (
+                  <TouchableOpacity key={opcion} style={[styles.opcionBotonVertical, editComida === opcion && styles.opcionSeleccionada]} onPress={() => setEditComida(opcion)}>
+                    <Text style={[styles.opcionTexto, editComida === opcion && styles.opcionTextoSeleccionado]}>{opcion}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.label}>¿Antes o después de comer?:</Text>
+              <View style={styles.selectorContenedorHorizontal}>
+                {RELACIONES.map((opcion) => (
+                  <TouchableOpacity key={opcion} style={[styles.opcionBotonHorizontal, editRelacion === opcion && styles.opcionSeleccionada]} onPress={() => setEditRelacion(opcion)}>
+                    <Text style={[styles.opcionTexto, editRelacion === opcion && styles.opcionTextoSeleccionado]}>{opcion}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* SELECTOR DE FECHA EN EL MODAL */}
+              <Text style={styles.label}>Fecha:</Text>
+              <View style={styles.filaFecha}>
+                <Text style={styles.textoFechaActual}>
+                  {editFecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'numeric', year: 'numeric' })}
+                </Text>
+                <TouchableOpacity onPress={() => setMostrarPickerModal(true)} style={styles.botonCalendario}>
+                  <Text style={styles.emojiCalendario}>📅</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+              </View>
+              {mostrarPickerModal && (
+                <DateTimePicker
+                  value={editFecha}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event, selectedDate) => {
+                    setMostrarPickerModal(false);
+                    if (selectedDate) setEditFecha(selectedDate);
+                  }}
+                />
+              )}
 
-            {/* SELECTOR DE FECHA EN EL MODAL */}
-            <Text style={styles.label}>Fecha:</Text>
-            <View style={styles.filaFecha}>
-              <Text style={styles.textoFechaActual}>
-                {editFecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'numeric', year: 'numeric' })}
-              </Text>
-              <TouchableOpacity onPress={() => setMostrarPickerModal(true)} style={styles.botonCalendario}>
-                <Text style={styles.emojiCalendario}>📅</Text>
-              </TouchableOpacity>
-            </View>
-            {mostrarPickerModal && (
-              <DateTimePicker
-                value={editFecha}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, selectedDate) => {
-                  setMostrarPickerModal(false);
-                  if (selectedDate) setEditFecha(selectedDate);
-                }}
-              />
-            )}
-            
-            <Text style={styles.label}>Hora:</Text>
-            <View style={styles.filaFecha}>
-              <Text style={styles.textoFechaActual}>
-                {editFecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-              <TouchableOpacity onPress={() => setMostrarPickerHoraModal(true)} style={styles.botonCalendario}>
-                <Text style={styles.emojiCalendario}>🕒</Text>
-              </TouchableOpacity>
-            </View>
-            {mostrarPickerHoraModal && (
-              <DateTimePicker
-                value={editFecha}
-                mode="time"
-                is24Hour={true}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={(event, selectedTime) => {
-                  setMostrarPickerHoraModal(false);
-                  if (selectedTime) {
-                    const nuevaFecha = new Date(editFecha);
-                    nuevaFecha.setHours(selectedTime.getHours());
-                    nuevaFecha.setMinutes(selectedTime.getMinutes());
-                    setEditFecha(nuevaFecha);
-                  }
-                }}
-              />
-            )}
+              <Text style={styles.label}>Hora:</Text>
+              <View style={styles.filaFecha}>
+                <Text style={styles.textoFechaActual}>
+                  {editFecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                <TouchableOpacity onPress={() => setMostrarPickerHoraModal(true)} style={styles.botonCalendario}>
+                  <Text style={styles.emojiCalendario}>🕒</Text>
+                </TouchableOpacity>
+              </View>
+              {mostrarPickerHoraModal && (
+                <DateTimePicker
+                  value={editFecha}
+                  mode="time"
+                  is24Hour={true}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event, selectedTime) => {
+                    setMostrarPickerHoraModal(false);
+                    if (selectedTime) {
+                      const nuevaFecha = new Date(editFecha);
+                      nuevaFecha.setHours(selectedTime.getHours());
+                      nuevaFecha.setMinutes(selectedTime.getMinutes());
+                      setEditFecha(nuevaFecha);
+                    }
+                  }}
+                />
+              )}
 
-            <Text style={styles.label}>Comentario:</Text>
-            <TextInput style={styles.input} value={editComentario} onChangeText={setEditComentario} />
+              <Text style={styles.label}>Comentario:</Text>
+              <TextInput style={styles.input} value={editComentario} onChangeText={setEditComentario} />
 
-            <TouchableOpacity style={styles.botonActualizarModal} onPress={actualizarMedicion}>
-              <Text style={styles.botonTexto}>Aplicar Cambios</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.botonActualizarModal} onPress={actualizarMedicion}>
+                <Text style={styles.botonTexto}>Aplicar Cambios</Text>
+              </TouchableOpacity>
 
-            <View style={styles.filaBotonesModal}>
-              <TouchableOpacity style={styles.botonBorrar} onPress={borrarMedicion}>
-                <Text style={styles.botonTexto}>Borrar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.botonCancelar} onPress={() => setModalVisible(false)}>
-                <Text style={styles.botonTexto}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={styles.filaBotonesModal}>
+                <TouchableOpacity style={styles.botonBorrar} onPress={borrarMedicion}>
+                  <Text style={styles.botonTexto}>Borrar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.botonCancelar} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.botonTexto}>Cancelar</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -370,6 +417,9 @@ const styles = StyleSheet.create({
   opcionSeleccionada: { backgroundColor: '#007bff', borderColor: '#007bff' },
   opcionTexto: { fontSize: 15, color: '#333', fontWeight: '500' },
   opcionTextoSeleccionado: { color: '#fff', fontWeight: 'bold' },
+
+  selectorContenedorHorizontal: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  opcionBotonHorizontal: { flex: 1, backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#e1e8ed' },
 
   filaFecha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, marginBottom: 12 },
   textoFechaActual: { fontSize: 18, fontWeight: 'bold', color: '#333' },
@@ -418,7 +468,7 @@ const styles = StyleSheet.create({
   listaVacia: { textAlign: 'center', marginTop: 40, color: '#aaa', fontSize: 16 },
 
   modalCentrado: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 },
-  modalContenido: { backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 5 },
+  modalContenido: { backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 5, maxHeight: '85%' },
   modalTitulo: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
   botonActualizarModal: { backgroundColor: '#28a745', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 15 },
   filaBotonesModal: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, gap: 10 },
