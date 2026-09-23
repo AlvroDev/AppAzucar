@@ -11,6 +11,7 @@ export default function App() {
   const [db, setDb] = useState(null);
   const [fecha, setFecha] = useState(new Date());
   const [mostrarPicker, setMostrarPicker] = useState(false);
+  const [mostrarPickerHora, setMostrarPickerHora] = useState(false);
 
   // Estados para el Modal de Edición
   const [modalVisible, setModalVisible] = useState(false);
@@ -20,6 +21,7 @@ export default function App() {
   const [editComentario, setEditComentario] = useState('');
   const [editFecha, setEditFecha] = useState(new Date());
   const [mostrarPickerModal, setMostrarPickerModal] = useState(false);
+  const [mostrarPickerHoraModal, setMostrarPickerHoraModal] = useState(false);
 
   useEffect(() => {
     async function initDB() {
@@ -182,6 +184,33 @@ export default function App() {
               />
             )}
 
+            <Text style={styles.label}>Hora:</Text>
+            <View style={styles.filaFecha}>
+              <Text style={styles.textoFechaActual}>
+                {fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+              <TouchableOpacity onPress={() => setMostrarPickerHora(true)} style={styles.botonCalendario}>
+                <Text style={styles.emojiCalendario}>🕒</Text>
+              </TouchableOpacity>
+            </View>
+            {mostrarPickerHora && (
+              <DateTimePicker
+                value={fecha}
+                mode="time"
+                is24Hour={true}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedTime) => {
+                  setMostrarPickerHora(false);
+                  if (selectedTime) {
+                    const nuevaFecha = new Date(fecha);
+                    nuevaFecha.setHours(selectedTime.getHours());
+                    nuevaFecha.setMinutes(selectedTime.getMinutes());
+                    setFecha(nuevaFecha);
+                  }
+                }}
+              />
+            )}
+
             <Text style={styles.label}>Comentarios u observaciones (Opcional):</Text>
             <TextInput
               style={[styles.input, styles.inputComentario]}
@@ -275,6 +304,33 @@ export default function App() {
                 onChange={(event, selectedDate) => {
                   setMostrarPickerModal(false);
                   if (selectedDate) setEditFecha(selectedDate);
+                }}
+              />
+            )}
+            
+            <Text style={styles.label}>Hora:</Text>
+            <View style={styles.filaFecha}>
+              <Text style={styles.textoFechaActual}>
+                {editFecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+              <TouchableOpacity onPress={() => setMostrarPickerHoraModal(true)} style={styles.botonCalendario}>
+                <Text style={styles.emojiCalendario}>🕒</Text>
+              </TouchableOpacity>
+            </View>
+            {mostrarPickerHoraModal && (
+              <DateTimePicker
+                value={editFecha}
+                mode="time"
+                is24Hour={true}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedTime) => {
+                  setMostrarPickerHoraModal(false);
+                  if (selectedTime) {
+                    const nuevaFecha = new Date(editFecha);
+                    nuevaFecha.setHours(selectedTime.getHours());
+                    nuevaFecha.setMinutes(selectedTime.getMinutes());
+                    setEditFecha(nuevaFecha);
+                  }
                 }}
               />
             )}
