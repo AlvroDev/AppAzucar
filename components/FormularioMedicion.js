@@ -30,6 +30,7 @@ export default function FormularioMedicion({ onGuardar }) {
       <TextInput
         style={styles.input}
         placeholder="Ej. 120"
+        placeholderTextColor="#999"
         keyboardType="numeric"
         value={azucar}
         onChangeText={setAzucar}
@@ -117,6 +118,7 @@ export default function FormularioMedicion({ onGuardar }) {
       <TextInput
         style={[styles.input, styles.inputComentario]}
         placeholder="Ej. Cambié de medicación, me sentía mareado..."
+        placeholderTextColor="#999"
         value={comentario}
         onChangeText={setComentario}
         multiline={true}

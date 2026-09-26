@@ -18,7 +18,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.tituloHeader}>Control de Azúcar</Text>
+      <Text style={styles.tituloHeader}>Control de Glucosa</Text>
 
       <FlatList
         data={historial}
