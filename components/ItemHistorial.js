@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { formatearFecha, formatearHora, obtenerColorAzucar } from '../utils/formato';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ItemHistorial({ item, onLongPress }) {
   let posicionMomento = 'flex-start';
@@ -32,7 +33,10 @@ export default function ItemHistorial({ item, onLongPress }) {
 
       {item.comentario ? (
         <View style={styles.contenedorComentario}>
-          <Text style={styles.comentarioTexto}>💬</Text>
+          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#333" />
+          <Text style={styles.comentarioTexto} numberOfLines={2}>
+            {item.comentario}
+          </Text>
         </View>
       ) : null}
     </TouchableOpacity>
@@ -67,12 +71,22 @@ const styles = StyleSheet.create({
   },
   momentoTexto: { fontSize: 15, fontWeight: '700', color: '#111' },
 
-  contenedorComentario: {
-    backgroundColor: '#525252',
-    padding: 8,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginTop: 4,
-  },
-  comentarioTexto: { fontSize: 13, color: '#555', fontStyle: 'italic' },
+contenedorComentario: {
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  backgroundColor: '#f0f2f5',
+  borderRadius: 8,
+  padding: 8,
+  marginTop: 4,
+},
+iconoComentario: {
+  marginTop: 2,
+  marginRight: 6,
+},
+comentarioTexto: {
+  flex: 1,
+  fontSize: 13,
+  color: '#555',
+  fontStyle: 'italic',
+},
 });

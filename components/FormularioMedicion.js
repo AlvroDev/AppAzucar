@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MOMENTOS, RELACIONES } from '../utils/formato';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function FormularioMedicion({ onGuardar }) {
   const [azucar, setAzucar] = useState('');
@@ -25,7 +26,7 @@ export default function FormularioMedicion({ onGuardar }) {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.label}>Ingresa el valor actual (mg/dL):</Text>
+      <Text style={styles.label}>Ingrese el valor actual (mg/dL):</Text>
       <TextInput
         style={styles.input}
         placeholder="Ej. 120"
@@ -70,7 +71,7 @@ export default function FormularioMedicion({ onGuardar }) {
           {fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'numeric', year: 'numeric' })}
         </Text>
         <TouchableOpacity onPress={() => setMostrarPicker(true)} style={styles.botonCalendario}>
-          <Text style={styles.emojiCalendario}>📅</Text>
+          <Ionicons name="calendar-outline" size={22} color="#333" />
         </TouchableOpacity>
       </View>
       {mostrarPicker && (
@@ -91,7 +92,7 @@ export default function FormularioMedicion({ onGuardar }) {
           {fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
         </Text>
         <TouchableOpacity onPress={() => setMostrarPickerHora(true)} style={styles.botonCalendario}>
-          <Text style={styles.emojiCalendario}>🕒</Text>
+          <Ionicons name="time-outline" size={22} color="#333" />
         </TouchableOpacity>
       </View>
       {mostrarPickerHora && (
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', padding: 15, borderRadius: 12, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
   label: { fontSize: 15, fontWeight: '600', color: '#444', marginBottom: 8, marginTop: 5 },
   input: { backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, fontSize: 18, textAlign: 'center', marginBottom: 12, fontWeight: 'bold' },
-  inputComentario: { fontSize: 14, textAlign: 'left', fontWeight: 'normal', height: 50, textAlignVertical: 'top' },
+  inputComentario: { fontSize: 14, textAlign: 'left', fontWeight: 'normal', height: 65, textAlignVertical: 'top' },
 
   selectorContenedorVertical: { marginBottom: 12 },
   opcionBotonVertical: { backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, marginBottom: 6, alignItems: 'center', borderWidth: 1, borderColor: '#e1e8ed' },
@@ -147,7 +148,6 @@ const styles = StyleSheet.create({
   filaFecha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, marginBottom: 12 },
   textoFechaActual: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   botonCalendario: { padding: 4 },
-  emojiCalendario: { fontSize: 22 },
 
   botonGuardar: { backgroundColor: '#28a745', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 5 },
   botonTexto: { color: '#fff', fontSize: 16, fontWeight: 'bold' },

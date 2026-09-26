@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Modal, Platform, ScrollView, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MOMENTOS, RELACIONES, parsearMomento } from '../utils/formato';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ModalEditar({ visible, item, onCerrar, onActualizar, onBorrar }) {
   const [editAzucar, setEditAzucar] = useState('');
@@ -85,7 +86,7 @@ export default function ModalEditar({ visible, item, onCerrar, onActualizar, onB
                 {editFecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'numeric', year: 'numeric' })}
               </Text>
               <TouchableOpacity onPress={() => setMostrarPickerModal(true)} style={styles.botonCalendario}>
-                <Text style={styles.emojiCalendario}>📅</Text>
+                <Ionicons name="calendar-outline" size={22} color="#333" />
               </TouchableOpacity>
             </View>
             {mostrarPickerModal && (
@@ -106,7 +107,7 @@ export default function ModalEditar({ visible, item, onCerrar, onActualizar, onB
                 {editFecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
               </Text>
               <TouchableOpacity onPress={() => setMostrarPickerHoraModal(true)} style={styles.botonCalendario}>
-                <Text style={styles.emojiCalendario}>🕒</Text>
+                <Ionicons name="time-outline" size={22} color="#333" />
               </TouchableOpacity>
             </View>
             {mostrarPickerHoraModal && (
@@ -128,7 +129,14 @@ export default function ModalEditar({ visible, item, onCerrar, onActualizar, onB
             )}
 
             <Text style={styles.label}>Comentario:</Text>
-            <TextInput style={styles.input} value={editComentario} onChangeText={setEditComentario} />
+            <TextInput
+              style={styles.inputComentarioModal}
+              value={editComentario}
+              onChangeText={setEditComentario}
+              multiline={true}
+              textAlignVertical="top"
+              scrollEnabled={true}
+            />
 
             <TouchableOpacity style={styles.botonActualizarModal} onPress={handleActualizar}>
               <Text style={styles.botonTexto}>Aplicar Cambios</Text>
@@ -152,6 +160,7 @@ export default function ModalEditar({ visible, item, onCerrar, onActualizar, onB
 const styles = StyleSheet.create({
   label: { fontSize: 15, fontWeight: '600', color: '#444', marginBottom: 8, marginTop: 5 },
   input: { backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, fontSize: 18, textAlign: 'center', marginBottom: 12, fontWeight: 'bold' },
+  inputComentarioModal: { backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, fontSize: 14, textAlign: 'left', fontWeight: 'normal', minHeight: 50, maxHeight: 150, marginBottom: 12 },
 
   selectorContenedorVertical: { marginBottom: 12 },
   opcionBotonVertical: { backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, marginBottom: 6, alignItems: 'center', borderWidth: 1, borderColor: '#e1e8ed' },
@@ -165,7 +174,6 @@ const styles = StyleSheet.create({
   filaFecha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f0f2f5', padding: 12, borderRadius: 8, marginBottom: 12 },
   textoFechaActual: { fontSize: 18, fontWeight: 'bold', color: '#333' },
   botonCalendario: { padding: 4 },
-  emojiCalendario: { fontSize: 22 },
 
   modalCentrado: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 },
   modalContenido: { backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 5, maxHeight: '85%' },
